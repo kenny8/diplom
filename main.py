@@ -46,91 +46,107 @@ for series_name in ['A', 'B', 'C']:
     evaluator = Evaluator(scaler=data['scaler'])
 
     for model in models:
-        print(f"\n--- Обучение модели: {model.name} ---")
-        start_time = time.time()
+        try:
+            print(f"\n--- Обучение модели: {model.name} ---")
+            start_time = time.time()
 
-        # Обучение модели
-        model.fit(data['train'])
+            # Обучение модели
+            model.fit(data['train'])
 
-        # Прогноз на валидационной выборке
-        val_steps = len(data['val'])
-        val_pred = model.predict(val_steps)
+            # Прогноз на валидационной выборке
+            val_steps = len(data['val'])
+            val_pred = model.predict(val_steps)
 
-        # Прогноз на тестовой выборке
-        test_steps = len(data['test'])
-        test_pred = model.predict(test_steps)
+            # Прогноз на тестовой выборке
+            test_steps = len(data['test'])
+            test_pred = model.predict(test_steps)
 
-        # Время выполнения
-        elapsed = time.time() - start_time
+            # Время выполнения
+            elapsed = time.time() - start_time
 
-        # Оценка на валидационной выборке
-        val_metrics = evaluator.calculate_metrics(data['val'].values, val_pred)
+            # Оценка на валидационной выборке
+            val_metrics = evaluator.calculate_metrics(data['val'].values, val_pred)
 
-        # Оценка на тестовой выборке
-        test_metrics = evaluator.calculate_metrics(data['test'].values, test_pred)
+            # Оценка на тестовой выборке
+            test_metrics = evaluator.calculate_metrics(data['test'].values, test_pred)
 
-        # Статистические тесты на остатках (если доступны)
-        residuals = []
-        if hasattr(model, 'resid'):
-            residuals = model.resid
-            stat_tests = evaluator.run_statistical_tests(residuals)
-        else:
+            # Статистические тесты на остатках (если доступны)
+            residuals = None
             stat_tests = {}
 
-        # Сохранение результатов
-        result = {
-            'series': series_name,
-            'model': model.name,
-            'train_time': elapsed,
-            'val_metrics': val_metrics,
-            'test_metrics': test_metrics,
-            'stat_tests': stat_tests
-        }
-        all_results.append(result)
+            # Проверяем наличие остатков и что они не пустые
+            if hasattr(model, 'resid') and model.resid is not None and not model.resid.empty:
+                residuals = model.resid
+                stat_tests = evaluator.run_statistical_tests(residuals)
 
-        # Визуализация результатов
-        plot_dir = f"results/{series_name}"
-        os.makedirs(plot_dir, exist_ok=True)
+            # Сохранение результатов
+            result = {
+                'series': series_name,
+                'model': model.name,
+                'train_time': elapsed,
+                'val_metrics': val_metrics,
+                'test_metrics': test_metrics,
+                'stat_tests': stat_tests
+            }
+            all_results.append(result)
 
-        # График прогноза на валидации
-        evaluator.plot_results(
-            data['val'].values,
-            val_pred,
-            f"{model.name} (валидация)",
-            f"{plot_dir}/{model.name}_val.png"
-        )
+            # Визуализация результатов
+            plot_dir = f"results/{series_name}"
+            os.makedirs(plot_dir, exist_ok=True)
 
-        # График прогноза на тесте
-        evaluator.plot_results(
-            data['test'].values,
-            test_pred,
-            f"{model.name} (тест)",
-            f"{plot_dir}/{model.name}_test.png"
-        )
-
-        # График остатков
-        if residuals:
-            evaluator.plot_residuals(
-                residuals,
-                model.name,
-                f"{plot_dir}/{model.name}_residuals.png"
+            # График прогноза на валидации
+            evaluator.plot_results(
+                data['val'].values,
+                val_pred,
+                f"{model.name} (валидация)",
+                f"{plot_dir}/{model.name}_val.png"
             )
 
-        # График компонентов (если доступны)
-        if hasattr(model, 'trend') and hasattr(model, 'seasonal') and hasattr(model, 'resid'):
-            evaluator.plot_components(
-                model.trend,
-                model.seasonal,
-                model.resid,
-                model.name,
-                f"{plot_dir}/{model.name}_components.png"
+            # График прогноза на тесте
+            evaluator.plot_results(
+                data['test'].values,
+                test_pred,
+                f"{model.name} (тест)",
+                f"{plot_dir}/{model.name}_test.png"
             )
 
-        print(f"  - Готово! Время: {elapsed:.2f} сек")
-        print(
-            f"  - Метрики на валидации: MAE={val_metrics['MAE']:.2f}, RMSE={val_metrics['RMSE']:.2f}, sMAPE={val_metrics['sMAPE']:.2f}%")
-        print(
-            f"  - Метрики на тесте: MAE={test_metrics['MAE']:.2f}, RMSE={test_metrics['RMSE']:.2f}, sMAPE={test_metrics['sMAPE']:.2f}%")
+            # График остатков
+            if residuals is not None and not residuals.empty:
+                evaluator.plot_residuals(
+                    residuals,
+                    model.name,
+                    f"{plot_dir}/{model.name}_residuals.png"
+                )
+
+            # График компонентов (если доступны)
+            if hasattr(model, 'trend') and hasattr(model, 'seasonal') and hasattr(model, 'resid'):
+                evaluator.plot_components(
+                    model.trend,
+                    model.seasonal,
+                    model.resid,
+                    model.name,
+                    f"{plot_dir}/{model.name}_components.png"
+                )
+
+            print(f"  - Готово! Время: {elapsed:.2f} сек")
+            print(
+                f"  - Метрики на валидации: MAE={val_metrics['MAE']:.2f}, RMSE={val_metrics['RMSE']:.2f}, sMAPE={val_metrics['sMAPE']:.2f}%")
+            print(
+                f"  - Метрики на тесте: MAE={test_metrics['MAE']:.2f}, RMSE={test_metrics['RMSE']:.2f}, sMAPE={test_metrics['sMAPE']:.2f}%")
+        except Exception as e:
+            print(f"  Ошибка при работе с моделью {model.name}: {str(e)}")
+            # Сохраняем информацию об ошибке в результатах
+            all_results.append({
+                'series': series_name,
+                'model': model.name,
+                'error': str(e),
+                'train_time': 0,
+                'val_metrics': {},
+                'test_metrics': {},
+                'stat_tests': {}
+            })
+            continue
+
 
 # Сохранение всех результатов в CSV
 results_df = pd.DataFrame(all_results)

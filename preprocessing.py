@@ -68,7 +68,9 @@ def preprocess_pipeline(series: pd.Series, name: str) -> dict:
     if name == 'A':
         # Для ряда A применяем логарифмирование
         transformed = transform_data(series, 'log')
-        print("  - Применено логарифмическое преобразование")
+        # Добавляем сдвиг, чтобы избежать отрицательных значений
+        transformed = transformed - transformed.min() + 1e-6
+        print("  - Применено логарифмическое преобразование со сдвигом")
     else:
         transformed = series.copy()
 
