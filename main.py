@@ -7,6 +7,7 @@ from utils import load_data
 from preprocessing import preprocess_pipeline
 from models import ModelFactory
 from evaluation import Evaluator
+from analysis import run_analysis, expand_metrics
 
 # Создаем директорию для результатов
 os.makedirs("results", exist_ok=True)
@@ -86,7 +87,8 @@ for series_name in ['A', 'B', 'C']:
                 'train_time': elapsed,
                 'val_metrics': val_metrics,
                 'test_metrics': test_metrics,
-                'stat_tests': stat_tests
+                'stat_tests': stat_tests,
+                'error': None
             }
             all_results.append(result)
 
@@ -133,6 +135,7 @@ for series_name in ['A', 'B', 'C']:
                 f"  - Метрики на валидации: MAE={val_metrics['MAE']:.2f}, RMSE={val_metrics['RMSE']:.2f}, sMAPE={val_metrics['sMAPE']:.2f}%")
             print(
                 f"  - Метрики на тесте: MAE={test_metrics['MAE']:.2f}, RMSE={test_metrics['RMSE']:.2f}, sMAPE={test_metrics['sMAPE']:.2f}%")
+            error = None
         except Exception as e:
             print(f"  Ошибка при работе с моделью {model.name}: {str(e)}")
             # Сохраняем информацию об ошибке в результатах
@@ -143,17 +146,37 @@ for series_name in ['A', 'B', 'C']:
                 'train_time': 0,
                 'val_metrics': {},
                 'test_metrics': {},
-                'stat_tests': {}
+                'stat_tests': {},
+                'error': str(e)
             })
             continue
 
 
 # Сохранение всех результатов в CSV
 results_df = pd.DataFrame(all_results)
-results_df.to_csv("results/all_metrics.csv", index=False)
+# Преобразуем результаты перед сохранением
+expanded_results = expand_metrics(results_df)
+
+# Сохраняем в CSV с красивым форматированием
+expanded_results.to_csv(
+    "results/all_metrics.csv",
+    index=False,
+    sep=';',          # Используем точку с запятой как разделитель столбцов
+    decimal=',',       # Используем запятую как десятичный разделитель
+    encoding='cp1251'  # Добавляем BOM для правильного отображения кириллицы
+)
 print("\nВсе результаты сохранены в results/all_metrics.csv")
+
 
 # Вывод сводной таблицы
 print("\nСводная таблица результатов:")
 summary = results_df[['series', 'model', 'test_metrics']]
 print(summary)
+
+# Запуск анализа результатов
+print("\nЗапуск анализа результатов...")
+try:
+    run_analysis(expanded_results)
+    print("Анализ результатов успешно завершен!")
+except Exception as e:
+    print(f"Ошибка при анализе результатов: {str(e)}")
