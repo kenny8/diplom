@@ -12,7 +12,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 import os
-
+import math
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak
@@ -201,11 +201,15 @@ def analyze_series(results_df, series, best_models, analysis_dir):
             f.write(f"  RMSE:  {best_model['test_RMSE']:.4f}\n")
             f.write(f"  sMAPE: {best_model['test_sMAPE']:.4f}%\n")
             f.write(f"Время обучения: {best_model['train_time']:.2f} сек\n")
-
-            if best_model.get('stat_Ljung-Box_pvalue'):
+            # Проверяем данные на валидность:
+            lb_value = best_model.get('stat_Ljung-Box_pvalue')
+            dw_value = best_model.get('stat_Durbin-Watson')
+            # Условие записи блока:
+            if lb_value is not None and dw_value is not None \
+                    and not math.isnan(lb_value) and not math.isnan(dw_value):
                 f.write("\nСтатистические тесты остатков:\n")
-                f.write(f"  Люнг-Бокс (p-value): {best_model['stat_Ljung-Box_pvalue']:.4f}\n")
-                f.write(f"  Дарбин-Уотсон: {best_model['stat_Durbin-Watson']:.4f}\n")
+                f.write(f"  Люнг-Бокс (p-value): {lb_value:.4f}\n")
+                f.write(f"  Дарбин-Уотсон: {dw_value:.4f}\n")
 
 
 def analyze_training_time(results_df, analysis_dir):

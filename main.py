@@ -2,7 +2,7 @@
 import time
 import os
 import pandas as pd
-from config import DATA_PATHS, MODEL_CONFIG
+from config import DATA_PATHS
 from utils import load_data
 from preprocessing import preprocess_pipeline
 from models import ModelFactory

@@ -9,12 +9,7 @@ DATA_PATHS = {
     'C': os.path.join(BASE_DIR, 'data', 'GROUB_C.csv')
 }
 
-# Параметры моделей
-MODEL_CONFIG = {
-    'A': ['HoltWintersAdditive', 'SARIMA', 'LSTM'],
-    'B': ['HoltDamped', 'ARIMA', 'TheilSen'],
-    'C': ['ARMA', 'GRU', 'SES']
-}
+
 
 # Параметры предобработки
 PREPROCESSING = {
