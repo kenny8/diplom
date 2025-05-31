@@ -17,3 +17,4 @@ PREPROCESSING = {
     'stationarity_alpha': 0.05,           # уровень значимости для ADF-теста
     'random_seed': 42                     # для воспроизводимости
 }
+
