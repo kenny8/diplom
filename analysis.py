@@ -310,7 +310,7 @@ def create_pdf_report(analysis_dir):
         if not summary_df.empty:
             # Заменяем True/False на понятные значения
             if 'is_best' in summary_df.columns:
-                summary_df['is_best'] = summary_df['is_best'].map({True: '✓', False: ''})
+                summary_df['is_best'] = summary_df['is_best'].map({True: '+', False: ''})
 
             # Форматируем заголовки
             headers = [
