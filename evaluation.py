@@ -12,32 +12,52 @@ class Evaluator:
 
     def calculate_metrics(self, y_true, y_pred):
         """Вычисляет метрики качества прогноза"""
-        # Преобразование в numpy массивы
-        y_true = np.asarray(y_true)
-        y_pred = np.asarray(y_pred)
+        # Преобразование в numpy массивы и проверка на пустые данные
+        y_true = np.asarray(y_true, dtype=np.float64)
+        y_pred = np.asarray(y_pred, dtype=np.float64)
 
-        # Проверка размеров
+        if y_true.size == 0 or y_pred.size == 0:
+            raise ValueError("Input arrays cannot be empty")
+
+        # Проверка размеров с предупреждением
         if len(y_true) != len(y_pred):
             min_len = min(len(y_true), len(y_pred))
             y_true = y_true[:min_len]
             y_pred = y_pred[:min_len]
+            warnings.warn(f"Input arrays have different lengths. Using first {min_len} elements", UserWarning)
 
-        # Обратное преобразование данных
-        if self.scaler:
-            y_true = self.scaler.inverse_transform(y_true.reshape(-1, 1)).flatten()
-            y_pred = self.scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
+        # Обратное преобразование данных с проверкой наличия scaler
+        if hasattr(self, 'scaler') and self.scaler is not None:
+            try:
+                y_true = self.scaler.inverse_transform(y_true.reshape(-1, 1)).flatten()
+                y_pred = self.scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
+            except Exception as e:
+                raise ValueError(f"Error during inverse transform: {str(e)}")
 
-        # Вычисление метрик
-        mae = np.mean(np.abs(y_pred - y_true))
-        rmse = np.sqrt(np.mean((y_pred - y_true) ** 2))
-        smape = 100 * np.mean(2 * np.abs(y_pred - y_true) / (np.abs(y_true) + np.abs(y_pred) + 1e-8))
+        # Проверка на NaN/Inf после преобразований
+        if np.any(~np.isfinite(y_true)) or np.any(~np.isfinite(y_pred)):
+            raise ValueError("Input contains NaN or infinite values after transformations")
+
+        # Вычисление метрик с дополнительными проверками
+        diff = y_pred - y_true
+        abs_diff = np.abs(diff)
+
+        mae = np.mean(abs_diff)
+
+        squared_diff = diff ** 2
+        rmse = np.sqrt(np.mean(squared_diff))
+
+        denominator = np.abs(y_true) + np.abs(y_pred)
+        # Для sMAPE добавляем эпсилон только к нулевым значениям знаменателя
+        epsilon = np.finfo(np.float64).eps
+        safe_denominator = np.where(denominator < epsilon, epsilon, denominator)
+        smape = 100 * np.mean(2 * abs_diff / safe_denominator)
 
         return {
-            'MAE': mae,
-            'RMSE': rmse,
-            'sMAPE': smape
+            'MAE': float(mae),
+            'RMSE': float(rmse),
+            'sMAPE': float(smape)
         }
-
     def run_statistical_tests(self, residuals):
         """Выполняет статистические тесты на остатках"""
         residuals = np.asarray(residuals)

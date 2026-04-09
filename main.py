@@ -38,7 +38,7 @@ model_factory = ModelFactory()
 all_results = []
 
 # Для каждого ряда обучаем и оцениваем модели
-for series_name in ['A', 'B', 'C']:
+for series_name in ['A', 'B', 'C' ]: #'A', 'B', 'C'
     print(f"\n=== Обработка ряда {series_name} ===")
     data = preprocessed_data[series_name]
     models = model_factory.create_models_for_series(series_name)

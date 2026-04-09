@@ -3,15 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
-from datetime import datetime
-import matplotlib.gridspec as gridspec
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-import os
 import math
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -50,12 +41,101 @@ def run_analysis(results_df):
     # 4. Сравнение времени обучения
     analyze_training_time(analysis_df, analysis_dir)
 
+    plot_smape_comparison(analysis_df, analysis_dir)
+
     # 5. Создание PDF отчета
     create_pdf_report(analysis_dir)
 
     print("\nАнализ успешно завершен!")
     print(f"Все результаты сохранены в папке: {analysis_dir}")
 
+
+def plot_smape_comparison(results_df, analysis_dir):
+    """Строит гистограммы сравнения моделей по sMAPE для каждого ряда и комбинированную"""
+    # Проверяем наличие необходимых столбцов
+    if 'test_sMAPE' not in results_df.columns or 'series' not in results_df.columns:
+        print("Ошибка: В данных отсутствуют необходимые столбцы 'test_sMAPE' или 'series'")
+        return
+
+    # 1. Отдельные графики для каждого ряда
+    for series in ['A', 'B', 'C']:
+        series_data = results_df[results_df['series'] == series]
+
+        if series_data.empty:
+            print(f"Предупреждение: Нет данных для ряда {series}")
+            continue
+
+        plt.figure(figsize=(12, 6))
+
+        # Сортируем от лучших к худшим
+        series_data = series_data.sort_values('test_sMAPE', ascending=True)
+
+        ax = sns.barplot(
+            x='model',
+            y='test_sMAPE',
+            data=series_data,
+            palette='viridis'
+        )
+
+        plt.title(f'Сравнение моделей по sMAPE для ряда {series}')
+        plt.ylabel('sMAPE (%)')
+        plt.xlabel('Модель')
+
+        # Добавляем значения на столбцы
+        for p in ax.patches:
+            height = p.get_height()
+            ax.annotate(
+                f"{height:.2f}%",
+                (p.get_x() + p.get_width() / 2., height),
+                ha='center',
+                va='center',
+                xytext=(0, 10),
+                textcoords='offset points'
+            )
+
+        plt.tight_layout()
+        plt.savefig(f"{analysis_dir}/smape_comparison_{series}.png")
+        plt.close()
+
+    # 2. Комбинированный график для всех рядов
+    plt.figure(figsize=(12, 6))
+
+    # Создаем копию данных для сортировки
+    plot_data = results_df.copy()
+
+    # Сортируем модели по среднему sMAPE (чтобы на графике были в порядке качества)
+    model_order = plot_data.groupby('model')['test_sMAPE'].mean().sort_values().index
+    plot_data['model'] = pd.Categorical(plot_data['model'], categories=model_order, ordered=True)
+
+    ax = sns.barplot(
+        x='model',
+        y='test_sMAPE',
+        hue='series',
+        data=plot_data,
+        palette='Set2',
+        ci=None  # Убираем доверительные интервалы
+    )
+
+    plt.title('Сравнение моделей по sMAPE для всех рядов')
+    plt.ylabel('sMAPE (%)')
+    plt.xlabel('Модель')
+    plt.legend(title='Ряд')
+
+    # Добавляем значения на столбцы
+    for p in ax.patches:
+        height = p.get_height()
+        ax.annotate(
+            f"{height:.2f}%",
+            (p.get_x() + p.get_width() / 2., height),
+            ha='center',
+            va='center',
+            xytext=(0, 10),
+            textcoords='offset points'
+        )
+
+    plt.tight_layout()
+    plt.savefig(f"{analysis_dir}/smape_comparison_combined.png")
+    plt.close()
 
 def find_best_models(results_df, analysis_dir):
     """Определяет лучшие модели для каждого ряда по sMAPE"""
@@ -451,6 +531,20 @@ def create_pdf_report(analysis_dir):
         except Exception as e:
             print(f"Ошибка при обработке ряда {series}: {e}")
 
+
+    # Добавляем гистограмму ошибок в конец отчета
+    elements.append(PageBreak())
+    elements.append(Paragraph("Анализ ошибок по моделям", subtitle_style))
+    error_img_path = os.path.join(analysis_dir, "smape_comparison_combined.png")
+    if os.path.exists(error_img_path):
+        try:
+            elements.append(Image(error_img_path, width=6 * inch, height=4 * inch))
+            elements.append(Spacer(1, 0.1 * inch))
+            elements.append(Paragraph("Гистограмма показывает процент ошибок для каждой модели при прогнозировании.", body_style))
+        except Exception as e:
+            print(f"Ошибка загрузки изображения {error_img_path}: {e}")
+    else:
+        elements.append(Paragraph("График распределения ошибок не найден.", body_style))
     # Генерация PDF с обработкой ошибок
     try:
         doc.build(elements)

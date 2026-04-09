@@ -1,0 +1,10 @@
+series;model;train_time;val_MAE;val_RMSE;val_sMAPE;test_MAE;test_RMSE;test_sMAPE;stat_Ljung-Box_pvalue;stat_Durbin-Watson;error_occurred
+A;Additive Component;0,0010;0,0960;0,1125;3,5918;0,3400;0,3639;12,2102;;;False
+A;Multiplicative Component;0,0020;0,1209;0,1393;4,5769;0,3656;0,3977;13,2207;;;False
+A;Mixed Component;0,0017;3,1239;3,1253;73,2835;2,8919;2,9001;66,0696;;;False
+A;SARIMA;0,3197;0,0777;0,0831;2,8034;0,1855;0,2041;6,4919;;;False
+A;Holt-Winters Additive;1,1091;0,0338;0,0409;1,2395;0,2277;0,2452;8,0669;;;False
+A;Theil-Sen;0,0129;0,1648;0,1782;5,9207;0,0898;0,1134;3,1042;;;False
+A;LSTM;15,7720;0,0617;0,0830;2,2752;0,2513;0,2726;8,8520;;;False
+A;GRU;11,7103;0,1109;0,1383;4,1353;0,3339;0,3589;11,9604;;;False
+A;Naive Forecast;0,0000;0,0968;0,1138;3,6395;0,3433;0,3687;12,3473;;;False
